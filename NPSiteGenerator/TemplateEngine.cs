@@ -92,30 +92,52 @@ namespace NPSiteGenerator
             }
             foreach (string file in Directory.EnumerateFiles(sourceDir, "*.page.xml"))
             {
+                Console.WriteLine("Reading page {0}", file);
                 try
                 {
-                    Console.WriteLine("Reading page {0}", file);
-                    XmlDocument doc = new XmlDocument();
-                    doc.Load(file);
-                    var newDoc = Process(doc);
                     string outFile = Path.Combine(outDir, 
                         Path.GetFileName(file).Replace(".page.xml", ".html"));
+
+                    if (File.Exists(outFile))
+                    {
+                        File.Delete(outFile);
+                    }
+                    var f = new FileStream(outFile, FileMode.OpenOrCreate);
 
                     var settings = new XmlWriterSettings
                     {
                         Indent = true,
                         OmitXmlDeclaration = true,
                     };
-
-                    if(File.Exists(outFile))
-                    {
-                        File.Delete(outFile);
-                    }
-
-                    var f = new FileStream(outFile, FileMode.OpenOrCreate);
                     var writer = XmlWriter.Create(f, settings);
 
-                    doc.FirstChild.WriteContentTo(writer);
+                    XmlDocument doc = new XmlDocument();
+                    doc.Load(file);
+                    XmlNode page = null;
+                    foreach(XmlNode n in doc)
+                    {
+                        if(n.Name.Equals("page"))
+                        {
+                            page = Process(n);
+                            break;
+                        }
+                    }
+                    if(page == null)
+                    {
+                        throw new Exception("No <page> node");
+                    }
+
+                    XmlDocument newDoc = new XmlDocument();
+                    XmlNode doctype = newDoc.CreateDocumentType("html", null, null, null);
+                    newDoc.AppendChild(doctype);
+
+                    foreach(XmlNode child in page.ChildNodes)
+                    {
+                        var n = newDoc.ImportNode(child, true);
+                        newDoc.AppendChild(n);
+                    }
+                    newDoc.WriteContentTo(writer);
+                    writer.Flush();
                     writer.Close();
                     f.Close();
                 }
@@ -132,7 +154,7 @@ namespace NPSiteGenerator
             {
                 if (n.NodeType == XmlNodeType.Element)
                 {
-                    if(templates.ContainsKey(n.Name))
+                    if (templates.ContainsKey(n.Name))
                     {
                         XmlNode applied = templates[n.Name].Apply(n, context);
                         XmlNode replacement = page.OwnerDocument.ImportNode(applied, true);
