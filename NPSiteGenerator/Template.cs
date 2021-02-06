@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace NPSiteGenerator
@@ -13,8 +14,9 @@ namespace NPSiteGenerator
             private set;
         }
 
-        readonly XmlNode _content;
+        readonly string _content;
         readonly IDictionary<string, IParam> _params;
+        readonly static Regex textReplace = new Regex(@"\{\{\s*(?<variable>\w+)\s*\}\}");
 
         public Template(XmlNode xml)
         {
@@ -27,7 +29,7 @@ namespace NPSiteGenerator
                     string name = child.Attributes["name"].Value.ToLower().Trim();
                     string type = child.Attributes["type"].Value.ToLower().Trim();
                     string subtype = "generic";
-                    // Split into types
+                    // Split into subtype
                     if (type.IndexOf(',') != -1)
                     {
                         int i = type.IndexOf(',');
@@ -39,11 +41,11 @@ namespace NPSiteGenerator
                     IParam param;
                     if (type.Equals("xml"))
                     {
-                        param = new XmlParam();
+                        param = new XmlParam(name);
                     }
                     else if (type.Equals("text"))
                     {
-                        param = new TextParam(subtype);
+                        param = new TextParam(name, subtype);
                     }
                     else
                     {
@@ -52,13 +54,16 @@ namespace NPSiteGenerator
 
                     _params[name] = param;
                 }
+                else if (child.Name.Equals("content"))
+                {
+                    _content = child.InnerXml;
+                }
             }
         }
-
-        // TODO: actually write to a file
-        public void ReadTemplateUse(XmlNode instance, TemplateEngine.Context context)
+        
+        public XmlNode Apply(XmlNode instance, TemplateEngine.Context context)
         {
-            var dict = new Dictionary<string, XmlNode>();
+            var values = new Dictionary<string, string>();
             foreach (XmlNode node in instance.ChildNodes)
             {
                 if (node.NodeType == XmlNodeType.Comment)
@@ -70,21 +75,48 @@ namespace NPSiteGenerator
 
                 if (!_params.ContainsKey(name))
                 {
-                    throw new Exception(string.Format("Unknown element: {0}", name));
+                    throw new Exception(string.Format("Unknown element: {0}", node.OuterXml));
                 }
-                else if (!_params[name].Validate(node, context))
-                {
-                    throw new Exception(
-                        string.Format("Bad element: node '{0}' does not match parameter {1}\n{2}",
-                        name, _params[name], node.InnerText));
-                }
-                dict[name] = node;
+                values[name] = _params[name].Process(node, context);
             }
 
-            foreach(var pair in dict)
+            foreach(var pair in values)
             {
-                Console.WriteLine("{0} = {1}", pair.Key, pair.Value.InnerXml);
+                Console.WriteLine("{0} = {1}", pair.Key, pair.Value);
             }
+
+            foreach(var param in _params.Keys)
+            {
+                if(!values.ContainsKey(param))
+                {
+                    throw new Exception(
+                        string.Format("Missing required parameter: {0}", param));
+                }
+            }
+
+            string newXml = TextReplace(values);
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(newXml);
+
+            return doc.DocumentElement;
+        }
+
+        private string TextReplace(IDictionary<string, string> values)
+        {
+            string _EvalMatch(Match m)
+            {
+                string var = m.Groups["variable"].Value;
+                if(values.ContainsKey(var))
+                {
+                    return values[var];
+                }
+                else
+                {
+                    return m.Value;
+                }
+            }
+
+            return textReplace.Replace(_content, _EvalMatch);
         }
     }
 }

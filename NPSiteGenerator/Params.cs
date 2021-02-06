@@ -6,7 +6,9 @@ namespace NPSiteGenerator
 {
     public interface IParam
     {
-        bool Validate(XmlNode node, TemplateEngine.Context context);
+        string Name { get; }
+
+        string Process(XmlNode node, TemplateEngine.Context context);
     }
 
     public class TextParam : IParam
@@ -18,9 +20,15 @@ namespace NPSiteGenerator
             Integer,
             FloatingPoint
         }
-
-        public TextParam(string p_type = "generic")
+        public string Name
         {
+            get;
+            private set;
+        }
+
+        public TextParam(string name, string p_type = "generic")
+        {
+            Name = name;
             switch (p_type.ToLower())
             {
                 case "generic":
@@ -46,33 +54,51 @@ namespace NPSiteGenerator
         }
         readonly DataType _type;
 
-        public bool Validate(XmlNode node, TemplateEngine.Context context)
+        public string Process(XmlNode outerNode, TemplateEngine.Context context)
         {
-            if (node.ChildNodes.Count != 1)
+            if (outerNode.ChildNodes.Count != 1)
             {
-                return false;
+                throw new ParamException(this, 
+                    string.Format("Expected one child, got {0}\n{1}", outerNode.ChildNodes.Count, outerNode.OuterXml));
             }
 
-            node = node.FirstChild;
+            XmlNode node = outerNode.FirstChild;
             if (node.NodeType != XmlNodeType.Text)
             {
-                return false;
+                throw new ParamException(this, 
+                    string.Format("Expected plain text, got {0}\n{1}", node.NodeType, node.OuterXml));
             }
 
             string text = node.InnerText;
             switch (_type)
             {
                 case DataType.Generic:
-                    return true;
+                    return text;
                 case DataType.Integer:
-                    return long.TryParse(text, out _);
+                    if(!long.TryParse(text, out _))
+                    {
+                        throw new ParamException(this,
+                            string.Format("Not a valid integer: {0}", text));
+                    }
+                    break;
                 case DataType.FloatingPoint:
-                    return double.TryParse(text, out _);
+                    if (!double.TryParse(text, out _))
+                    {
+                        throw new ParamException(this,
+                            string.Format("Not a valid float: {0}", text));
+                    }
+                    break;
                 case DataType.File:
-                    return File.Exists(Path.Combine(context.FileRoot, text));
+                    if(!File.Exists(Path.Combine(context.FileRoot, text)))
+                    {
+                        throw new ParamException(this,
+                            string.Format("File does not exist: {0}", text));
+                    }
+                    return "/" + text;
                 default:
                     throw new NotImplementedException(string.Format("Unknown type: {0}", _type));
             }
+            return text;
         }
 
         public override string ToString()
@@ -83,14 +109,40 @@ namespace NPSiteGenerator
 
     public class XmlParam : IParam
     {
-        public bool Validate(XmlNode node, TemplateEngine.Context context)
+        public string Name
         {
-            return true;
+            get;
+            private set;
+        }
+
+        public XmlParam(string name)
+        {
+            Name = name;
+        }
+
+        public string Process(XmlNode node, TemplateEngine.Context context)
+        {
+            return node.InnerXml;
         }
 
         public override string ToString()
         {
             return "xml";
+        }
+    }
+
+    public class ParamException : Exception
+    {
+        public IParam Param
+        {
+            get;
+            private set;
+        }
+
+        public ParamException(IParam param, string context)
+            : base(string.Format("Failed to parse parameter '{0}' : {1}", param.Name, context))
+        {
+            Param = param;
         }
     }
 }
