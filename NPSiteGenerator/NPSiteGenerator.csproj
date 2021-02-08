@@ -78,11 +78,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ParamFactory.cs" />
     <Compile Include="Params.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TemplateEngine.cs" />
     <Compile Include="Template.cs" />
+    <Compile Include="TemplateValue.cs" />
+    <Compile Include="TemplateActions.cs" />
+    <Compile Include="TextReplaceFormulas.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

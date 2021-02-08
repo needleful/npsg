@@ -41,7 +41,6 @@ namespace NPSiteGenerator
             }
             foreach (string template in Directory.EnumerateFiles(sourceDir, "*.template.xml"))
             {
-                Console.WriteLine("Template file: {0}", template);
                 var xml = new XmlDocument();
                 try
                 {
@@ -52,12 +51,12 @@ namespace NPSiteGenerator
                         {
                             foreach (XmlNode sub in node.ChildNodes)
                             {
-                                AddTemplate(sub);
+                                AddTemplate(template, sub);
                             }
                         }
                         else
                         {
-                            AddTemplate(node);
+                            AddTemplate(template, node);
                         }
                     }
                 }
@@ -95,22 +94,6 @@ namespace NPSiteGenerator
                 Console.WriteLine("Reading page {0}", file);
                 try
                 {
-                    string outFile = Path.Combine(outDir, 
-                        Path.GetFileName(file).Replace(".page.xml", ".html"));
-
-                    if (File.Exists(outFile))
-                    {
-                        File.Delete(outFile);
-                    }
-                    var f = new FileStream(outFile, FileMode.OpenOrCreate);
-
-                    var settings = new XmlWriterSettings
-                    {
-                        Indent = true,
-                        OmitXmlDeclaration = true,
-                    };
-                    var writer = XmlWriter.Create(f, settings);
-
                     XmlDocument doc = new XmlDocument();
                     doc.Load(file);
                     XmlNode page = null;
@@ -131,11 +114,27 @@ namespace NPSiteGenerator
                     XmlNode doctype = newDoc.CreateDocumentType("html", null, null, null);
                     newDoc.AppendChild(doctype);
 
-                    foreach(XmlNode child in page.ChildNodes)
+                    foreach (XmlNode child in page.ChildNodes)
                     {
                         var n = newDoc.ImportNode(child, true);
                         newDoc.AppendChild(n);
                     }
+
+                    string outFile = Path.Combine(outDir,
+                    Path.GetFileName(file).Replace(".page.xml", ".html"));
+
+                    if (File.Exists(outFile))
+                    {
+                        File.Delete(outFile);
+                    }
+                    var f = new FileStream(outFile, FileMode.OpenOrCreate);
+
+                    var settings = new XmlWriterSettings
+                    {
+                        Indent = true,
+                        OmitXmlDeclaration = true,
+                    };
+                    var writer = XmlWriter.Create(f, settings);
                     newDoc.WriteContentTo(writer);
                     writer.Flush();
                     writer.Close();
@@ -158,7 +157,11 @@ namespace NPSiteGenerator
                     {
                         XmlNode applied = templates[n.Name].Apply(n, context);
                         XmlNode replacement = page.OwnerDocument.ImportNode(applied, true);
-                        page.ReplaceChild(replacement, n);
+                        foreach(XmlNode c in replacement.ChildNodes)
+                        {
+                            page.InsertBefore(c, n);
+                        }
+                        page.RemoveChild(n);
                     }
                     else
                     {
@@ -170,7 +173,7 @@ namespace NPSiteGenerator
             return page;
         }
 
-        protected void AddTemplate(XmlNode xml)
+        protected void AddTemplate(string filename, XmlNode xml)
         {
             if (xml.NodeType == XmlNodeType.Comment)
             {
@@ -185,7 +188,7 @@ namespace NPSiteGenerator
             {
                 Template t = new Template(xml);
                 templates[t.Name] = t;
-                Console.WriteLine("\tNew Template: {0}", t.Name);
+                Console.WriteLine("* {0} :: {1}", filename, t);
             }
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 
@@ -7,24 +8,27 @@ namespace NPSiteGenerator
     public interface IParam
     {
         string Name { get; }
+        string TypeName { get; }
 
-        string Process(XmlNode node, TemplateEngine.Context context);
+        ITemplateValue Process(XmlNode node, TemplateEngine.Context context);
     }
 
     public class TextParam : IParam
     {
-        enum DataType
+        public enum DataType
         {
-            Generic,
-            File,
-            Integer,
-            FloatingPoint
+            generic,
+            file,
+            integer,
+            @float
         }
         public string Name
         {
             get;
             private set;
         }
+
+        public string TypeName => "text," + SubType.ToString();
 
         public TextParam(string name, string p_type = "generic")
         {
@@ -34,27 +38,27 @@ namespace NPSiteGenerator
                 case "generic":
                 case "text":
                 case "none":
-                    _type = DataType.Generic;
+                    SubType = DataType.generic;
                     break;
                 case "integer":
                 case "int":
                 case "uint":
-                    _type = DataType.Integer;
+                    SubType = DataType.integer;
                     break;
                 case "float":
                 case "double":
-                    _type = DataType.FloatingPoint;
+                    SubType = DataType.@float;
                     break;
                 case "file":
-                    _type = DataType.File;
+                    SubType = DataType.file;
                     break;
                 default:
                     throw new ArgumentException(string.Format("Invalid subtype: {0}", p_type));
             }
         }
-        readonly DataType _type;
+        public readonly DataType SubType;
 
-        public string Process(XmlNode outerNode, TemplateEngine.Context context)
+        public ITemplateValue Process(XmlNode outerNode, TemplateEngine.Context context)
         {
             if (outerNode.ChildNodes.Count != 1)
             {
@@ -70,40 +74,36 @@ namespace NPSiteGenerator
             }
 
             string text = node.InnerText;
-            switch (_type)
+            switch (SubType)
             {
-                case DataType.Generic:
-                    return text;
-                case DataType.Integer:
+                case DataType.generic:
+                    break;
+                case DataType.integer:
                     if(!long.TryParse(text, out _))
                     {
                         throw new ParamException(this,
                             string.Format("Not a valid integer: {0}", text));
                     }
                     break;
-                case DataType.FloatingPoint:
+                case DataType.@float:
                     if (!double.TryParse(text, out _))
                     {
                         throw new ParamException(this,
                             string.Format("Not a valid float: {0}", text));
                     }
                     break;
-                case DataType.File:
+                case DataType.file:
                     if(!File.Exists(Path.Combine(context.FileRoot, text)))
                     {
                         throw new ParamException(this,
                             string.Format("File does not exist: {0}", text));
                     }
-                    return "/" + text;
+                    text = "/" + text;
+                    break;
                 default:
-                    throw new NotImplementedException(string.Format("Unknown type: {0}", _type));
+                    throw new NotImplementedException(string.Format("Unknown type: {0}", SubType));
             }
-            return text;
-        }
-
-        public override string ToString()
-        {
-            return string.Format("text,{0}", _type);
+            return new TextValue(text);
         }
     }
 
@@ -115,19 +115,54 @@ namespace NPSiteGenerator
             private set;
         }
 
+        public string TypeName => "xml";
+
         public XmlParam(string name)
         {
             Name = name;
         }
 
-        public string Process(XmlNode node, TemplateEngine.Context context)
+        public ITemplateValue Process(XmlNode node, TemplateEngine.Context context)
         {
-            return node.InnerXml;
+            return new XmlValue(node);
+        }
+    }
+
+    public class ListParam : IParam
+    {
+        public string Name
+        {
+            get;
+            private set;
         }
 
-        public override string ToString()
+        public string TypeName => "list," + SubParam.TypeName;
+
+        public IParam SubParam;
+
+        public ListParam(string name, IParam subParam)
         {
-            return "xml";
+            Name = name;
+            SubParam = subParam;
+        }
+
+        public ITemplateValue Process(XmlNode node, TemplateEngine.Context context)
+        {
+            ListValue list = new ListValue(node.ChildNodes.Count);
+            foreach(XmlNode c in node.ChildNodes)
+            {
+                if(c.NodeType != XmlNodeType.Comment)
+                {
+                    if(!c.Name.Equals(SubParam.Name))
+                    {
+                        throw new ParamException(this, 
+                            string.Format("Unexpected node (expected '{0}'): {1}\n{2}", 
+                                SubParam.Name, c.Name, node.OuterXml));
+                    }
+                    list.AddValue(SubParam.Process(c, context));
+                }
+            }
+            return list;
         }
     }
 
@@ -140,7 +175,7 @@ namespace NPSiteGenerator
         }
 
         public ParamException(IParam param, string context)
-            : base(string.Format("Failed to parse parameter '{0}' : {1}", param.Name, context))
+            : base(string.Format("Failed to parse parameter '{0}/{1}' : {2}", param.Name, param.TypeName, context))
         {
             Param = param;
         }

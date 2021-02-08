@@ -14,56 +14,39 @@ namespace NPSiteGenerator
             private set;
         }
 
-        readonly string _content;
-        readonly IDictionary<string, IParam> _params;
-        readonly static Regex textReplace = new Regex(@"\{\{\s*(?<variable>\w+)\s*\}\}");
+        public IDictionary<string, IParam> Params
+        {
+            get;
+            set;
+        }
+
+
+        private IDictionary<string, ITextFormula> _formulas = new Dictionary<string, ITextFormula>();
+
+        readonly XmlNode _content;
+        readonly static Regex textReplace = new Regex(@"\{\{\s*(?<variable>[^\{\}]+)\s*\}\}");
 
         public Template(XmlNode xml)
         {
             Name = xml.Attributes["name"].Value;
-            _params = new Dictionary<string, IParam>();
+            Params = new Dictionary<string, IParam>();
             foreach (XmlNode child in xml)
             {
                 if (child.Name.Equals("param"))
                 {
-                    string name = child.Attributes["name"].Value.ToLower().Trim();
-                    string type = child.Attributes["type"].Value.ToLower().Trim();
-                    string subtype = "generic";
-                    // Split into subtype
-                    if (type.IndexOf(',') != -1)
-                    {
-                        int i = type.IndexOf(',');
-                        string c = type;
-                        type = c.Substring(0, i).Trim();
-                        subtype = c.Substring(i + 1).Trim();
-                    }
-
-                    IParam param;
-                    if (type.Equals("xml"))
-                    {
-                        param = new XmlParam(name);
-                    }
-                    else if (type.Equals("text"))
-                    {
-                        param = new TextParam(name, subtype);
-                    }
-                    else
-                    {
-                        throw new Exception(string.Format("Unrecognized param type: {0}", type));
-                    }
-
-                    _params[name] = param;
+                    IParam p = ParamFactory.Create(child);
+                    Params[p.Name] = p;
                 }
                 else if (child.Name.Equals("content"))
                 {
-                    _content = child.InnerXml;
+                    _content = child;
                 }
             }
         }
         
         public XmlNode Apply(XmlNode instance, TemplateEngine.Context context)
         {
-            var values = new Dictionary<string, string>();
+            var values = new Dictionary<string, ITemplateValue>();
             foreach (XmlNode node in instance.ChildNodes)
             {
                 if (node.NodeType == XmlNodeType.Comment)
@@ -73,11 +56,11 @@ namespace NPSiteGenerator
 
                 string name = node.Name;
 
-                if (!_params.ContainsKey(name))
+                if (!Params.ContainsKey(name))
                 {
                     throw new Exception(string.Format("Unknown element: {0}", node.OuterXml));
                 }
-                values[name] = _params[name].Process(node, context);
+                values[name] = Params[name].Process(node, context);
             }
 
             foreach(var pair in values)
@@ -85,7 +68,7 @@ namespace NPSiteGenerator
                 Console.WriteLine("{0} = {1}", pair.Key, pair.Value);
             }
 
-            foreach(var param in _params.Keys)
+            foreach(var param in Params.Keys)
             {
                 if(!values.ContainsKey(param))
                 {
@@ -94,29 +77,62 @@ namespace NPSiteGenerator
                 }
             }
 
-            string newXml = TextReplace(values);
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(newXml);
-
-            return doc.DocumentElement;
+            return ApplyValues(_content.CloneNode(true), values);
         }
 
-        private string TextReplace(IDictionary<string, string> values)
+        public XmlNode ApplyValues(XmlNode content, IDictionary<string, ITemplateValue> values)
         {
+            // Text replacement
             string _EvalMatch(Match m)
             {
                 string var = m.Groups["variable"].Value;
                 if(values.ContainsKey(var))
                 {
-                    return values[var];
+                    return values[var].ToString();
                 }
                 else
                 {
                     return m.Value;
                 }
             }
+            content.InnerXml = textReplace.Replace(content.InnerXml, _EvalMatch);
 
-            return textReplace.Replace(_content, _EvalMatch);
+            return XmlReplace(content, values);
+        }
+
+        private XmlNode XmlReplace(XmlNode content, IDictionary<string, ITemplateValue> values)
+        {
+            foreach (XmlNode node in content.ChildNodes)
+            {
+                if (TemplateActions.Contains(node.Name))
+                {
+                    TemplateActions.DoAction(node.Name, this, content, node, values);
+                }
+                else if (node.NodeType == XmlNodeType.Element && node.ChildNodes.Count > 0)
+                {
+                    XmlReplace(node, values);
+                }
+            }
+            return content;
+        }
+
+        public override string ToString()
+        {
+            string s = "Template:";
+            bool first = true;
+            foreach(var p in Params.Values)
+            {
+                if(first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    s += ";";
+                }
+                s += string.Format(" {0}/{1}", p.Name, p.TypeName);
+            }
+            return s;
         }
     }
 }
