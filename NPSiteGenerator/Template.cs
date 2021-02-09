@@ -20,14 +20,23 @@ namespace NPSiteGenerator
             set;
         }
 
+        public IDictionary<string, ITextFormula> Formulas
+        {
+            get;
+        } = new Dictionary<string, ITextFormula>();
 
-        private IDictionary<string, ITextFormula> _formulas = new Dictionary<string, ITextFormula>();
+        public TemplateEngine Engine
+        {
+            get;
+            private set;
+        }
 
         readonly XmlNode _content;
-        readonly static Regex textReplace = new Regex(@"\{\{\s*(?<variable>[^\{\}]+)\s*\}\}");
+        readonly static Regex textReplace = new Regex(@"\{\{\s*(?<formula>[^\{\}]+)\s*\}\}");
 
-        public Template(XmlNode xml)
+        public Template(TemplateEngine engine, XmlNode xml)
         {
+            Engine = engine;
             Name = xml.Attributes["name"].Value;
             Params = new Dictionary<string, IParam>();
             foreach (XmlNode child in xml)
@@ -44,7 +53,7 @@ namespace NPSiteGenerator
             }
         }
         
-        public XmlNode Apply(XmlNode instance, TemplateEngine.Context context)
+        public XmlNode Apply(XmlNode instance, TemplateEngine.TContext context)
         {
             var values = new Dictionary<string, ITemplateValue>();
             foreach (XmlNode node in instance.ChildNodes)
@@ -61,11 +70,6 @@ namespace NPSiteGenerator
                     throw new Exception(string.Format("Unknown element: {0}", node.OuterXml));
                 }
                 values[name] = Params[name].Process(node, context);
-            }
-
-            foreach(var pair in values)
-            {
-                Console.WriteLine("{0} = {1}", pair.Key, pair.Value);
             }
 
             foreach(var param in Params.Keys)
@@ -85,10 +89,11 @@ namespace NPSiteGenerator
             // Text replacement
             string _EvalMatch(Match m)
             {
-                string var = m.Groups["variable"].Value;
-                if(values.ContainsKey(var))
+                string f = m.Groups["formula"].Value;
+                var form = GetOrParseFormula(f);
+                if (form.CanCompute(values))
                 {
-                    return values[var].ToString();
+                    return form.Compute(values);
                 }
                 else
                 {
@@ -100,17 +105,33 @@ namespace NPSiteGenerator
             return XmlReplace(content, values);
         }
 
+        private ITextFormula GetOrParseFormula(string formula)
+        {
+            if(!Formulas.ContainsKey(formula))
+            {
+                Formulas[formula] = TextFormulaParser.Parse(formula);
+            }
+
+            return Formulas[formula];
+        }
+
         private XmlNode XmlReplace(XmlNode content, IDictionary<string, ITemplateValue> values)
         {
-            foreach (XmlNode node in content.ChildNodes)
+            var originalNodes = new List<XmlNode>(content.ChildNodes.Count);
+
+            foreach (XmlNode c in content.ChildNodes)
+            {
+                originalNodes.Add(c);
+            }
+            foreach(var node in originalNodes)
             {
                 if (TemplateActions.Contains(node.Name))
                 {
-                    TemplateActions.DoAction(node.Name, this, content, node, values);
+                    TemplateActions.DoAction(Engine.Context, this, content, node, values);
                 }
                 else if (node.NodeType == XmlNodeType.Element && node.ChildNodes.Count > 0)
                 {
-                    XmlReplace(node, values);
+                    content.ReplaceChild(XmlReplace(node, values), node);
                 }
             }
             return content;

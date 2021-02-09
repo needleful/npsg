@@ -10,7 +10,7 @@ namespace NPSiteGenerator
         string Name { get; }
         string TypeName { get; }
 
-        ITemplateValue Process(XmlNode node, TemplateEngine.Context context);
+        ITemplateValue Process(XmlNode node, TemplateEngine.TContext context);
     }
 
     public class TextParam : IParam
@@ -58,7 +58,7 @@ namespace NPSiteGenerator
         }
         public readonly DataType SubType;
 
-        public ITemplateValue Process(XmlNode outerNode, TemplateEngine.Context context)
+        public ITemplateValue Process(XmlNode outerNode, TemplateEngine.TContext context)
         {
             if (outerNode.ChildNodes.Count != 1)
             {
@@ -122,7 +122,7 @@ namespace NPSiteGenerator
             Name = name;
         }
 
-        public ITemplateValue Process(XmlNode node, TemplateEngine.Context context)
+        public ITemplateValue Process(XmlNode node, TemplateEngine.TContext context)
         {
             return new XmlValue(node);
         }
@@ -146,7 +146,7 @@ namespace NPSiteGenerator
             SubParam = subParam;
         }
 
-        public ITemplateValue Process(XmlNode node, TemplateEngine.Context context)
+        public ITemplateValue Process(XmlNode node, TemplateEngine.TContext context)
         {
             ListValue list = new ListValue(node.ChildNodes.Count);
             foreach(XmlNode c in node.ChildNodes)

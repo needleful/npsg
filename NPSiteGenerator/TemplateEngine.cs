@@ -10,7 +10,7 @@ namespace NPSiteGenerator
 {
     public class TemplateEngine
     {
-        public struct Context
+        public struct TContext
         {
             public string FileRoot
             {
@@ -18,19 +18,35 @@ namespace NPSiteGenerator
                 private set;
             }
 
-            public Context(string root)
+            public string SourceRoot
             {
-                FileRoot = root;
+                get;
+                private set;
+            }
+
+            public TContext(string froot, string srcRoot)
+            {
+                FileRoot = froot;
+                SourceRoot = srcRoot;
             }
         }
 
         readonly IDictionary<string, Template> templates;
-        readonly Context context;
-
-        public TemplateEngine(string fileRoot)
+        public TContext Context
         {
-            context = new Context(fileRoot);
+            get;
+            private set;
+        }
+
+        public TemplateEngine(string fileRoot, string sourceDir)
+        {
+            Context = new TContext(fileRoot, sourceDir);
             templates = new Dictionary<string, Template>();
+        }
+
+        public void ReadTemplates()
+        {
+            ReadTemplates(Context.SourceRoot);
         }
 
         public void ReadTemplates(string sourceDir)
@@ -67,17 +83,18 @@ namespace NPSiteGenerator
             }
         }
 
-        public void GeneratePages(string sourceDir, string outDir = "")
+        public void GeneratePages()
+        {
+            GeneratePages(Context.SourceRoot, Context.FileRoot);
+        }
+
+        public void GeneratePages(string sourceDir, string outDir)
         {
             if (!Directory.Exists(sourceDir))
             {
                 throw new ArgumentException(string.Format("Source directory does not exist: {0}", sourceDir));
             }
-            if (string.IsNullOrEmpty(outDir))
-            {
-                outDir = context.FileRoot;
-            }
-            if(!Directory.Exists(outDir))
+            if (!Directory.Exists(outDir))
             {
                 Directory.CreateDirectory(outDir);
             }
@@ -97,15 +114,15 @@ namespace NPSiteGenerator
                     XmlDocument doc = new XmlDocument();
                     doc.Load(file);
                     XmlNode page = null;
-                    foreach(XmlNode n in doc)
+                    foreach (XmlNode n in doc)
                     {
-                        if(n.Name.Equals("page"))
+                        if (n.Name.Equals("page"))
                         {
                             page = Process(n);
                             break;
                         }
                     }
-                    if(page == null)
+                    if (page == null)
                     {
                         throw new Exception("No <page> node");
                     }
@@ -149,15 +166,15 @@ namespace NPSiteGenerator
 
         protected XmlNode Process(XmlNode page)
         {
-            foreach(XmlNode n in page.ChildNodes)
+            foreach (XmlNode n in page.ChildNodes)
             {
                 if (n.NodeType == XmlNodeType.Element)
                 {
                     if (templates.ContainsKey(n.Name))
                     {
-                        XmlNode applied = templates[n.Name].Apply(n, context);
+                        XmlNode applied = templates[n.Name].Apply(n, Context);
                         XmlNode replacement = page.OwnerDocument.ImportNode(applied, true);
-                        foreach(XmlNode c in replacement.ChildNodes)
+                        foreach (XmlNode c in replacement.ChildNodes)
                         {
                             page.InsertBefore(c, n);
                         }
@@ -186,7 +203,7 @@ namespace NPSiteGenerator
             }
             else
             {
-                Template t = new Template(xml);
+                Template t = new Template(this, xml);
                 templates[t.Name] = t;
                 Console.WriteLine("* {0} :: {1}", filename, t);
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using System.Xml;
 namespace NPSiteGenerator
 {
     public delegate void TemplateAction(
+        TemplateEngine.TContext context,
         Template template,
         XmlNode parent, XmlNode node,
         IDictionary<string, ITemplateValue> values);
@@ -16,8 +18,8 @@ namespace NPSiteGenerator
     {
         public static IReadOnlyDictionary<string, TemplateAction> Actions = new Dictionary<string, TemplateAction>
         {
-            {"foreach", ForEach },
-            {"cond", Cond }
+            {"ForEach", ForEach },
+            {"Match", Match }
         };
 
         public static bool Contains(string name)
@@ -25,14 +27,14 @@ namespace NPSiteGenerator
             return Actions.ContainsKey(name);
         }
 
-        public static void DoAction(string name, Template template,
+        public static void DoAction(TemplateEngine.TContext context, Template template,
             XmlNode parent, XmlNode node,
             IDictionary<string, ITemplateValue> values)
         {
-            Actions[name](template, parent, node, values);
+            Actions[node.Name](context, template, parent, node, values);
         }
 
-        public static void ForEach(Template template,
+        public static void ForEach(TemplateEngine.TContext context, Template template,
             XmlNode parent, XmlNode node,
             IDictionary<string, ITemplateValue> values)
         {
@@ -54,11 +56,13 @@ namespace NPSiteGenerator
                         values[iter_name] = new TextValue(iter_value.ToString());
                         values[paramList.SubParam.Name] = value;
                         XmlNode applied = template.ApplyValues(node.CloneNode(true), values);
-                        listElem.InnerXml += applied.InnerXml;
+                        foreach(XmlNode c2 in applied.ChildNodes)
+                        {
+                            parent.InsertBefore(c2, node);
+                        }
                         ++iter_value;
                     }
-                    Console.WriteLine(">> {0} -> {1}", node.OuterXml, listElem.OuterXml);
-                    parent.ReplaceChild(listElem, node);
+                    parent.RemoveChild(node);
 
                     values.Remove(iter_name);
                     values.Remove(paramList.SubParam.Name);
@@ -72,11 +76,54 @@ namespace NPSiteGenerator
             }
         }
 
-        public static void Cond(Template template,
+        public static void Match(TemplateEngine.TContext context, Template template,
            XmlNode parent, XmlNode node,
            IDictionary<string, ITemplateValue> values)
         {
-            throw new NotImplementedException();
+            string func = node.Attributes["f"].Value.Trim();
+            string x = node.Attributes["x"].Value.Trim();
+
+            Console.WriteLine("MATCHING: {0}({1})", func, x);
+
+            string to_match = null;
+
+            switch(func)
+            {
+                case "src-file-exists":
+                    to_match = File.Exists(Path.Combine(context.SourceRoot, x)).ToString();
+                    break;
+                case "file-exists":
+                    to_match = File.Exists(Path.Combine(context.FileRoot, x)).ToString();
+                    break;
+                case "get":
+                    to_match = x;
+                    break;
+                default:
+                    throw new NotImplementedException(string.Format("Unknown match function '{0}'", func));
+            }
+
+            XmlNode found = null;
+            foreach(XmlNode c in node.ChildNodes)
+            {
+                if(c.Name.Equals(to_match))
+                {
+                    if(found != null)
+                    {
+                        throw new Exception(string.Format("Duplicate matching elements within Match action: {0}\n{1}", to_match, node.OuterXml));
+                    }
+                    found = c;
+                    foreach(XmlNode ch in c.ChildNodes)
+                    {
+                        parent.InsertBefore(ch, node);
+                    }
+                    parent.RemoveChild(node);
+                }
+            }
+
+            if(found is null)
+            {
+                parent.RemoveChild(node);
+            }
         }
     }
 }

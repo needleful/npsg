@@ -9,11 +9,9 @@ namespace NPSiteGenerator
     {
         static void Main(string[] args)
         {
-            string sourceDirectory = "src";
-
-            var engine = new TemplateEngine("www");
-            engine.ReadTemplates(sourceDirectory);
-            engine.GeneratePages("src");
+            var engine = new TemplateEngine("www", "src");
+            engine.ReadTemplates();
+            engine.GeneratePages();
         }
     }
 }
