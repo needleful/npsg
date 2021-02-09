@@ -58,11 +58,11 @@ namespace NPSiteGenerator
                         XmlNode applied = template.ApplyValues(node.CloneNode(true), values);
                         foreach(XmlNode c2 in applied.ChildNodes)
                         {
-                            parent.InsertBefore(c2, node);
+                            listElem.AppendChild(c2);
                         }
                         ++iter_value;
                     }
-                    parent.RemoveChild(node);
+                    parent.ReplaceChild(listElem, node);
 
                     values.Remove(iter_name);
                     values.Remove(paramList.SubParam.Name);
