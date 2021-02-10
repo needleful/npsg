@@ -44,6 +44,10 @@ namespace NPSiteGenerator
                 if (template.Params[name] is ListParam paramList)
                 {
                     XmlElement listElem = parent.OwnerDocument.CreateElement("div");
+                    if((node as XmlElement).HasAttribute("html-class"))
+                    {
+                        listElem.SetAttribute("class", node.Attributes["html-class"].Value);
+                    }
                     int iter_value = 1;
                     string iter_name = "__iter";
                     if (node.Attributes["i"] != null)
