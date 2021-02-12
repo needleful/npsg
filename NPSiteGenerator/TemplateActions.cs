@@ -84,27 +84,36 @@ namespace NPSiteGenerator
            XmlNode parent, XmlNode node,
            IDictionary<string, ITemplateValue> values)
         {
-            string func = node.Attributes["f"].Value.Trim();
-            string x = node.Attributes["x"].Value.Trim();
-
-            Console.WriteLine("MATCHING: {0}({1})", func, x);
+            XmlElement elem = node as XmlElement;
 
             string to_match = null;
 
-            switch(func)
+            if (elem.HasAttribute("f") && elem.HasAttribute("x"))
             {
-                case "src-file-exists":
-                    to_match = File.Exists(Path.Combine(context.SourceRoot, x)).ToString();
-                    break;
-                case "file-exists":
-                    to_match = File.Exists(Path.Combine(context.FileRoot, x)).ToString();
-                    break;
-                case "get":
-                    to_match = x;
-                    break;
-                default:
-                    throw new NotImplementedException(string.Format("Unknown match function '{0}'", func));
+                string func = node.Attributes["f"].Value.Trim();
+                string x = node.Attributes["x"].Value.Trim();
+
+                Console.WriteLine("MATCHING: {0}({1})", func, x);
+                switch (func)
+                {
+                    case "src-file-exists":
+                        to_match = File.Exists(Path.Combine(context.SourceRoot, x)).ToString();
+                        break;
+                    case "file-exists":
+                        to_match = File.Exists(Path.Combine(context.FileRoot, x)).ToString();
+                        break;
+                    case "get":
+                        to_match = x;
+                        break;
+                    default:
+                        throw new NotImplementedException(string.Format("Unknown match function '{0}'", func));
+                }
             }
+            else
+            {
+                to_match = elem.GetAttribute("value");
+            }
+            
 
             XmlNode found = null;
             foreach(XmlNode c in node.ChildNodes)
@@ -116,18 +125,17 @@ namespace NPSiteGenerator
                         throw new Exception(string.Format("Duplicate matching elements within Match action: {0}\n{1}", to_match, node.OuterXml));
                     }
                     found = c;
+                    XmlNode prev = node;
                     foreach(XmlNode ch in c.ChildNodes)
                     {
-                        parent.InsertBefore(ch, node);
+                        parent.InsertAfter(ch, prev);
+                        prev = ch;
+                        Console.WriteLine("___Inserting {0}", ch.OuterXml);
                     }
-                    parent.RemoveChild(node);
                 }
             }
-
-            if(found is null)
-            {
-                parent.RemoveChild(node);
-            }
+            parent.RemoveChild(node);
+            Console.WriteLine("\\-Result: {0}", parent.InnerXml);
         }
     }
 }
