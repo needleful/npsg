@@ -87,6 +87,7 @@
     <Compile Include="TemplateValue.cs" />
     <Compile Include="TemplateActions.cs" />
     <Compile Include="TextReplaceFormulas.cs" />
+    <Compile Include="v2\PageGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
