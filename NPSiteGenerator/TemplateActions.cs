@@ -35,38 +35,32 @@ namespace NPSiteGenerator
         }
 
         public static void ForEach(TemplateEngine.TContext context, Template template,
-            XmlNode parent, XmlNode node,
+            XmlNode parent, XmlNode feNode,
             IDictionary<string, ITemplateValue> values)
         {
-            string name = node.Attributes["list"].Value;
+            XmlElement feElem = feNode as XmlElement;
+            string name = feNode.Attributes["list"].Value;
             if (values.ContainsKey(name) && values[name] is ListValue list)
             {
                 if (template.Params[name] is ListParam paramList)
                 {
-                    XmlElement listElem = parent.OwnerDocument.CreateElement("div");
-                    if((node as XmlElement).HasAttribute("html-class"))
-                    {
-                        listElem.SetAttribute("class", node.Attributes["html-class"].Value);
-                    }
                     int iter_value = 1;
                     string iter_name = "__iter";
-                    if (node.Attributes["i"] != null)
+                    if (feNode.Attributes["i"] != null)
                     {
-                        iter_name = node.Attributes["i"].Value;
+                        iter_name = feNode.Attributes["i"].Value;
                     }
 
                     foreach (var value in list.Values)
                     {
                         values[iter_name] = new TextValue(iter_value.ToString());
                         values[paramList.SubParam.Name] = value;
-                        XmlNode applied = template.ApplyValues(node.CloneNode(true), values);
-                        foreach(XmlNode c2 in applied.ChildNodes)
-                        {
-                            listElem.AppendChild(c2);
-                        }
+                        XmlNode applied = template.ApplyValues(feNode.CloneNode(true), values);
+
+                        parent.InsertChildrenAfter(applied, feNode);
                         ++iter_value;
                     }
-                    parent.ReplaceChild(listElem, node);
+                    parent.RemoveChild(feNode);
 
                     values.Remove(iter_name);
                     values.Remove(paramList.SubParam.Name);
@@ -75,23 +69,23 @@ namespace NPSiteGenerator
                 {
                     throw new ParamException(template.Params[name],
                         string.Format("Content was formated as a list, but the param is {0}\n{1}",
-                            template.Params[name].TypeName, node.OuterXml));
+                            template.Params[name].TypeName, feNode.OuterXml));
                 }
             }
         }
 
         public static void Match(TemplateEngine.TContext context, Template template,
-           XmlNode parent, XmlNode node,
+           XmlNode parent, XmlNode matchNode,
            IDictionary<string, ITemplateValue> values)
         {
-            XmlElement elem = node as XmlElement;
+            XmlElement matchElem = matchNode as XmlElement;
 
             string to_match = null;
 
-            if (elem.HasAttribute("f") && elem.HasAttribute("x"))
+            if (matchElem.HasAttribute("f") && matchElem.HasAttribute("x"))
             {
-                string func = node.Attributes["f"].Value.Trim();
-                string x = node.Attributes["x"].Value.Trim();
+                string func = matchNode.Attributes["f"].Value.Trim();
+                string x = matchNode.Attributes["x"].Value.Trim();
 
                 Console.WriteLine("MATCHING: {0}({1})", func, x);
                 switch (func)
@@ -111,30 +105,18 @@ namespace NPSiteGenerator
             }
             else
             {
-                to_match = elem.GetAttribute("value");
+                to_match = matchElem.GetAttribute("value");
             }
-            
 
-            XmlNode found = null;
-            foreach(XmlNode c in node.ChildNodes)
+            
+            foreach(XmlNode c in matchNode.ChildNodes)
             {
                 if(c.Name.Equals(to_match))
                 {
-                    if(found != null)
-                    {
-                        throw new Exception(string.Format("Duplicate matching elements within Match action: {0}\n{1}", to_match, node.OuterXml));
-                    }
-                    found = c;
-                    XmlNode prev = node;
-                    foreach(XmlNode ch in c.ChildNodes)
-                    {
-                        parent.InsertAfter(ch, prev);
-                        prev = ch;
-                        Console.WriteLine("___Inserting {0}", ch.OuterXml);
-                    }
+                    parent.InsertChildrenAfter(c, matchNode);
                 }
             }
-            parent.RemoveChild(node);
+            parent.RemoveChild(matchNode);
             Console.WriteLine("\\-Result: {0}", parent.InnerXml);
         }
     }
