@@ -26,6 +26,20 @@ namespace NPSiteGenerator
             foreach (XmlNode c in nodes)
             {
                 parent.InsertAfter(c, prev);
+                prev = c;
+            }
+        }
+
+        public static void InsertChildrenBefore(this XmlNode parent, XmlNode source, XmlNode reference)
+        {
+            List<XmlNode> nodes = new List<XmlNode>(source.ChildNodes.Count);
+            foreach (XmlNode c in source.ChildNodes)
+            {
+                nodes.Add(c);
+            }
+            foreach(XmlNode c in nodes)
+            {
+                parent.InsertBefore(c, reference);
             }
         }
     }

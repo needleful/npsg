@@ -57,7 +57,7 @@ namespace NPSiteGenerator
                         values[paramList.SubParam.Name] = value;
                         XmlNode applied = template.ApplyValues(feNode.CloneNode(true), values);
 
-                        parent.InsertChildrenAfter(applied, feNode);
+                        parent.InsertChildrenBefore(applied, feNode);
                         ++iter_value;
                     }
                     parent.RemoveChild(feNode);
@@ -86,8 +86,6 @@ namespace NPSiteGenerator
             {
                 string func = matchNode.Attributes["f"].Value.Trim();
                 string x = matchNode.Attributes["x"].Value.Trim();
-
-                Console.WriteLine("MATCHING: {0}({1})", func, x);
                 switch (func)
                 {
                     case "src-file-exists":
@@ -113,11 +111,10 @@ namespace NPSiteGenerator
             {
                 if(c.Name.Equals(to_match))
                 {
-                    parent.InsertChildrenAfter(c, matchNode);
+                    parent.InsertChildrenBefore(c, matchNode);
                 }
             }
             parent.RemoveChild(matchNode);
-            Console.WriteLine("\\-Result: {0}", parent.InnerXml);
         }
     }
 }
