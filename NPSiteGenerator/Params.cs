@@ -20,7 +20,8 @@ namespace NPSiteGenerator
             generic,
             file,
             integer,
-            @float
+            @float,
+            date
         }
         public string Name
         {
@@ -51,6 +52,9 @@ namespace NPSiteGenerator
                     break;
                 case "file":
                     SubType = DataType.file;
+                    break;
+                case "date":
+                    SubType = DataType.date;
                     break;
                 default:
                     throw new ArgumentException(string.Format("Invalid subtype: {0}", p_type));
@@ -100,6 +104,13 @@ namespace NPSiteGenerator
                     }
                     text = "/" + text;
                     break;
+                case DataType.date:
+                    if (!DateTime.TryParse(text, out DateTime date))
+                    {
+                        throw new ParamException(this,
+                            string.Format("Invalid date format: {0}", text));
+                    }
+                    return new StructValue(date);
                 default:
                     throw new NotImplementedException(string.Format("Unknown type: {0}", SubType));
             }

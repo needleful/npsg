@@ -67,6 +67,16 @@ namespace NPSiteGenerator
             _values = new Dictionary<string, ITemplateValue>(reserved);
         }
 
+        public StructValue(DateTime date)
+        {
+            _values = new Dictionary<string, ITemplateValue>(){
+                { "text", new TextValue(date.ToString())},
+                { "year", new TextValue(date.ToString("yyyy")) },
+                { "month", new TextValue(date.ToString("MMMM")) },
+                {"day", new TextValue(date.ToString("dd")) }
+            };
+        }
+
         public void AddField(string name, ITemplateValue value)
         {
             if(_values.ContainsKey(name))

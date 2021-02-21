@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NPSiteGenerator
 {
@@ -311,15 +307,20 @@ namespace NPSiteGenerator
         {
             try
             {
-                // Special case because it's not math
+                // Special cases for non-math
                 if(Op == MathOp.Access)
                 {
                     var str = (Left as VariableFormula).Name;
                     var field = (Right as VariableFormula).Name;
                     return (values[str] as StructValue).Values[field].ToString();
                 }
+
                 string ls = Left.Compute(values);
                 string rs = Right.Compute(values);
+                if (Op == MathOp.Equal)
+                        return (ls == rs).ToString();
+                else if(Op == MathOp.NotEqual)
+                        return (ls != rs).ToString();
 
                 double lhs = double.Parse(Left.Compute(values));
                 double rhs = double.Parse(Right.Compute(values));
@@ -348,10 +349,6 @@ namespace NPSiteGenerator
                     case MathOp.Modulo:
                         res = lhs % rhs;
                         break;
-                    case MathOp.Equal:
-                        return (lhs == rhs).ToString();
-                    case MathOp.NotEqual:
-                        return (lhs != rhs).ToString();
                     default:
                         throw new NotImplementedException(string.Format("No math operation: {0}", Op));
                 }
