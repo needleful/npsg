@@ -18,6 +18,7 @@ namespace NPSiteGenerator
         Modulo,
         Equal,
         NotEqual,
+        Access,
     }
 
     public class TextFormulaParser
@@ -53,11 +54,13 @@ namespace NPSiteGenerator
             {"%", MathOp.Modulo },
             {"//", MathOp.Int_Div },
             {"==", MathOp.Equal },
-            {"!=", MathOp.NotEqual }
+            {"!=", MathOp.NotEqual },
+            {":", MathOp.Access }
         };
 
         public static IReadOnlyDictionary<MathOp, int> OpOrder = new Dictionary<MathOp, int>
         {
+            { MathOp.Access, 200 },
             { MathOp.Expotent, 100 },
             { MathOp.Multiply, 50 },
             { MathOp.Divide, 50 },
@@ -90,7 +93,7 @@ namespace NPSiteGenerator
             bool idCharacter(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
 
             bool isOp(char c) =>
-                c == '+' || c == '%' || c == '*' || c == '-' || c == '^' || c == '/' || c == '!' || c == '=';
+                c == '+' || c == '%' || c == '*' || c == '-' || c == '^' || c == '/' || c == '!' || c == '=' || c == ':';
 
             void applyValueFormula(ITextFormula f)
             {
@@ -290,15 +293,34 @@ namespace NPSiteGenerator
 
         public bool CanCompute(IDictionary<string, ITemplateValue> values)
         {
-            return Left.CanCompute(values) && Right.CanCompute(values);
+            if (Op == MathOp.Access)
+            {
+                return Left is VariableFormula str 
+                    && Right is VariableFormula field
+                    && values.ContainsKey(str.Name)
+                    && values[str.Name] is StructValue sv
+                    && sv.Values.ContainsKey(field.Name);
+            }
+            else
+            {
+                return Left.CanCompute(values) && Right.CanCompute(values);
+            }
         }
 
         public string Compute(IDictionary<string, ITemplateValue> values)
         {
-            string ls = Left.Compute(values);
-            string rs = Right.Compute(values);
             try
             {
+                // Special case because it's not math
+                if(Op == MathOp.Access)
+                {
+                    var str = (Left as VariableFormula).Name;
+                    var field = (Right as VariableFormula).Name;
+                    return (values[str] as StructValue).Values[field].ToString();
+                }
+                string ls = Left.Compute(values);
+                string rs = Right.Compute(values);
+
                 double lhs = double.Parse(Left.Compute(values));
                 double rhs = double.Parse(Right.Compute(values));
 
@@ -338,7 +360,7 @@ namespace NPSiteGenerator
             }
             catch(Exception e)
             {
-                throw new Exception(string.Format("Failed to compute {0}({1}, {2})", Op, ls, rs), e);
+                throw new Exception(string.Format("Failed to compute {0})", this), e);
             }
         }
 

@@ -56,4 +56,24 @@ namespace NPSiteGenerator
             _values.Add(value);
         }
     }
+
+    public class StructValue : ITemplateValue
+    {
+        public IReadOnlyDictionary<string, ITemplateValue> Values => _values;
+        protected readonly Dictionary<string, ITemplateValue> _values;
+
+        public StructValue(int reserved = 8)
+        {
+            _values = new Dictionary<string, ITemplateValue>(reserved);
+        }
+
+        public void AddField(string name, ITemplateValue value)
+        {
+            if(_values.ContainsKey(name))
+            {
+                throw new Exception(string.Format("Pre-existing struct field: {0}", name));
+            }
+            _values[name] = value;
+        }
+    }
 }

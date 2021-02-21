@@ -157,12 +157,90 @@ namespace NPSiteGenerator
                     {
                         throw new ParamException(this, 
                             string.Format("Unexpected node (expected '{0}'): {1}\n{2}", 
-                                SubParam.Name, c.Name, node.OuterXml));
+                                SubParam.Name, c.Name, c.OuterXml));
                     }
                     list.AddValue(SubParam.Process(c, context));
                 }
             }
             return list;
+        }
+    }
+
+    public class StructParam : IParam
+    {
+        public string Name
+        {
+            get;
+            private set;
+        }
+
+        public IReadOnlyList<IParam> SubParams => _subParams;
+        protected List<IParam> _subParams;
+
+        public string TypeName
+        {
+            get
+            {
+                string tname = "struct(";
+                bool first = true;
+                foreach(var p in SubParams)
+                {
+                    if (!first)
+                        tname += "; ";
+                    else
+                        first = false;
+                    tname += string.Format("{0}/{1}", p.Name, p.TypeName);
+                }
+                return tname + ")";
+            }
+        }
+
+        public StructParam(string name, int reserved = 8)
+        {
+            Name = name;
+            _subParams = new List<IParam>(reserved);
+        }
+
+        public void AddField(IParam param)
+        {
+            if(GetField(param.Name) != null)
+            {
+                throw new ParamException(this, string.Format("Duplicate fields: {0}", param.Name));
+            }
+            _subParams.Add(param);
+        }
+
+        public ITemplateValue Process(XmlNode node, TemplateEngine.TContext context)
+        {
+            StructValue val = new StructValue(_subParams.Count);
+            int processed = 0;
+            foreach(XmlNode fieldNode in node.ChildNodes)
+            {
+                IParam subField = GetField(fieldNode.Name);
+                if(subField == null)
+                {
+                    throw new ParamException(this, string.Format("{0} is not a field of this struct", fieldNode.Name));
+                }
+                val.AddField(subField.Name, subField.Process(fieldNode, context));
+                processed++;
+            }
+            if(processed < _subParams.Count)
+            {
+                throw new ParamException(this, string.Format("Missing params!  {0} of {1}, {2}", processed, _subParams.Count, node.OuterXml));
+            }
+            return val;
+        }
+
+        public IParam GetField(string name)
+        {
+            foreach(IParam sub in SubParams)
+            {
+                if(sub.Name == name)
+                {
+                    return sub;
+                }
+            }
+            return null;
         }
     }
 

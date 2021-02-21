@@ -47,7 +47,7 @@ namespace NPSiteGenerator
                         if(count != 0)
                         {
                             throw new Exception(
-                                string.Format("Unexpected nodes (expected one child for list type): {0}", node.OuterXml));
+                                string.Format("Unexpected nodes (expected only one child for list type): {0}", node.OuterXml));
                         }
                         param = new ListParam(name, Create(elem));
                         count += 1;
@@ -57,6 +57,18 @@ namespace NPSiteGenerator
                 {
                     throw new Exception(
                         string.Format("No child type for list: {0}", node.OuterXml));
+                }
+                return param;
+            }
+            else if(type[0].Equals("struct"))
+            {
+                StructParam param = new StructParam(name, node.ChildNodes.Count);
+                foreach(XmlNode fieldNode in node.ChildNodes)
+                {
+                    if(fieldNode.NodeType != XmlNodeType.Comment)
+                    {
+                        param.AddField(Create(fieldNode));
+                    }
                 }
                 return param;
             }
