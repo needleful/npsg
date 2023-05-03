@@ -74,7 +74,8 @@ namespace NPSiteGenerator
 
             foreach(var param in Params.Keys)
             {
-                if(!values.ContainsKey(param))
+                var required = Params[param].Required;
+                if(!values.ContainsKey(param) && required)
                 {
                     throw new Exception(
                         string.Format("Missing required parameter: {0}", param));

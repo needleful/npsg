@@ -91,6 +91,9 @@ namespace NPSiteGenerator
                     case "src-file-exists":
                         to_match = File.Exists(Path.Combine(context.SourceRoot, x)).ToString();
                         break;
+                    case "src-dir-exists":
+                        to_match = Directory.Exists(Path.Combine(context.SourceRoot, x)).ToString();
+                        break;
                     case "file-exists":
                         to_match = File.Exists(Path.Combine(context.FileRoot, x)).ToString();
                         break;

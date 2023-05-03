@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
 namespace NPSiteGenerator
@@ -11,59 +7,71 @@ namespace NPSiteGenerator
     {
         public static IParam Create(XmlNode node)
         {
-            if(!node.Name.Equals("param"))
+            var elem = node as XmlElement;
+
+            if(!elem.Name.Equals("param"))
             {
                 throw new Exception(
-                    string.Format("Unexpected node type (expected 'param'): {0}", node.Name));
+                    string.Format("Unexpected node type (expected 'param'): {0}", elem.Name));
             }
 
-            string name = node.Attributes["name"].Value;
-            string[] type = node.Attributes["type"].Value
+            string name = elem.Attributes["name"].Value;
+            string[] type = elem.Attributes["type"].Value
                 .Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+            bool required = true;
+            if(elem.HasAttribute("required"))
+            {
+                var b = elem.Attributes["required"].Value;
+                if (!bool.TryParse(b, out required))
+                {
+                    Console.WriteLine($"WARNING: bad boolean for parameter {name}: {b}");
+                }
+            }
             
             if (type[0].Equals("xml"))
             {
-                return new XmlParam(name);
+                return new XmlParam(name, required);
             }
             else if (type[0].Equals("text"))
             {
                 if (type.Length > 1)
                 {
-                    return new TextParam(name, type[1]);
+                    return new TextParam(name, required, type[1]);
                 }
                 else
                 {
-                    return new TextParam(name);
+                    return new TextParam(name, required);
                 }
             }
             else if (type[0].Equals("list"))
             {
                 int count = 0;
                 ListParam param = null;
-                foreach(XmlNode elem in node)
+                foreach(XmlNode sub in elem)
                 {
-                    if(elem.NodeType != XmlNodeType.Comment)
+                    if(sub.NodeType != XmlNodeType.Comment)
                     {
                         if(count != 0)
                         {
                             throw new Exception(
-                                string.Format("Unexpected nodes (expected only one child for list type): {0}", node.OuterXml));
+                                string.Format("Unexpected nodes (expected only one child for list type): {0}", elem.OuterXml));
                         }
-                        param = new ListParam(name, Create(elem));
+                        param = new ListParam(name, required, Create(sub));
                         count += 1;
                     }
                 }
                 if(param == null)
                 {
                     throw new Exception(
-                        string.Format("No child type for list: {0}", node.OuterXml));
+                        string.Format("No child type for list: {0}", elem.OuterXml));
                 }
                 return param;
             }
             else if(type[0].Equals("struct"))
             {
-                StructParam param = new StructParam(name, node.ChildNodes.Count);
-                foreach(XmlNode fieldNode in node.ChildNodes)
+                StructParam param = new StructParam(name, required, elem.ChildNodes.Count);
+                foreach(XmlNode fieldNode in elem.ChildNodes)
                 {
                     if(fieldNode.NodeType != XmlNodeType.Comment)
                     {

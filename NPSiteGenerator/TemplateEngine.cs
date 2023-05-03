@@ -10,6 +10,7 @@ namespace NPSiteGenerator
 {
     public class TemplateEngine
     {
+
         public struct TContext
         {
             public string FileRoot
@@ -28,6 +29,16 @@ namespace NPSiteGenerator
             {
                 FileRoot = froot;
                 SourceRoot = srcRoot;
+            }
+        }
+
+        public class XmlCompliantWriter: XmlTextWriter
+        {
+            public XmlCompliantWriter(FileStream file): base(file, Encoding.UTF8){}
+
+            public override void WriteEndElement()
+            {
+                base.WriteFullEndElement();
             }
         }
 
@@ -145,13 +156,7 @@ namespace NPSiteGenerator
                         File.Delete(outFile);
                     }
                     var f = new FileStream(outFile, FileMode.OpenOrCreate);
-
-                    var settings = new XmlWriterSettings
-                    {
-                        Indent = true,
-                        OmitXmlDeclaration = true,
-                    };
-                    var writer = XmlWriter.Create(f, settings);
+                    var writer = new XmlCompliantWriter(f);
                     newDoc.WriteContentTo(writer);
                     writer.Flush();
                     writer.Close();

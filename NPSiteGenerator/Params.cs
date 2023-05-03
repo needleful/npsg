@@ -10,6 +10,8 @@ namespace NPSiteGenerator
         string Name { get; }
         string TypeName { get; }
 
+        bool Required { get; }
+
         ITemplateValue Process(XmlNode node, TemplateEngine.TContext context);
     }
 
@@ -29,11 +31,18 @@ namespace NPSiteGenerator
             private set;
         }
 
+        public bool Required
+        {
+            get;
+            private set;
+        }
+
         public string TypeName => "text," + SubType.ToString();
 
-        public TextParam(string name, string p_type = "generic")
+        public TextParam(string name, bool required, string p_type = "generic")
         {
             Name = name;
+            Required = required;
             switch (p_type.ToLower())
             {
                 case "generic":
@@ -126,11 +135,18 @@ namespace NPSiteGenerator
             private set;
         }
 
+        public bool Required
+        {
+            get;
+            private set;
+        }
+
         public string TypeName => "xml";
 
-        public XmlParam(string name)
+        public XmlParam(string name, bool required)
         {
             Name = name;
+            Required = required;
         }
 
         public ITemplateValue Process(XmlNode node, TemplateEngine.TContext context)
@@ -147,13 +163,19 @@ namespace NPSiteGenerator
             private set;
         }
 
+        public bool Required
+        {
+            get;
+            private set;
+        }
         public string TypeName => "list," + SubParam.TypeName;
 
         public IParam SubParam;
 
-        public ListParam(string name, IParam subParam)
+        public ListParam(string name, bool required, IParam subParam)
         {
             Name = name;
+            Required = required;
             SubParam = subParam;
         }
 
@@ -185,6 +207,11 @@ namespace NPSiteGenerator
             private set;
         }
 
+        public bool Required
+        {
+            get;
+            private set;
+        }
         public IReadOnlyList<IParam> SubParams => _subParams;
         protected List<IParam> _subParams;
 
@@ -206,9 +233,10 @@ namespace NPSiteGenerator
             }
         }
 
-        public StructParam(string name, int reserved = 8)
+        public StructParam(string name, bool required, int reserved = 8)
         {
             Name = name;
+            Required = required;
             _subParams = new List<IParam>(reserved);
         }
 
