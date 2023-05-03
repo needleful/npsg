@@ -100,3 +100,49 @@ And here's most of page 1:
 	</comic-needleful>
 </page>
 ```
+
+Here's a paramater that's a list of objects:
+
+```xml
+<param name='comics' type='list'>
+	<param name='comic' type='struct'>
+		<param name='title' type='text'/>
+		<param name='thumbnail' type='text,file'/>
+		<param name='href' type='text,file'/>
+	</param>
+</param>
+```
+
+You would them use `ForEach` to iterate over the list in the template content. The `comic:<variable>` is the fields of the comic parameter.
+```xml
+<ForEach list='comics'>
+	<li>
+		<a href='{{comic:href}}'>
+			<img class='thumbnail' src='{{comic:thumbnail}}'/>
+			<p class='thumbnail-title'>{{comic:title}}</p>
+		</a>
+	</li>
+</ForEach>
+```
+
+Then it would be used in the page like you'd expect:
+
+```xml
+<comics>
+	<comic>
+		<title>Morning Bacon</title>
+		<thumbnail>img/needleful/morning_bacon_thumb.png</thumbnail>
+		<href>comic/needleful/29.html</href>
+	</comic>
+	<comic>
+		<title>Bovine</title>
+		<thumbnail>img/needleful/bovine_thumb.png</thumbnail>
+		<href>comic/needleful/28.html</href>
+	</comic>
+	<comic>
+		<title>Apple</title>
+		<thumbnail>img/needleful/apple_thumb.png</thumbnail>
+		<href>comic/needleful/27.html</href>
+	</comic>
+</comics>
+```
