@@ -14,6 +14,16 @@ namespace NPSiteGenerator
                 throw new Exception(
                     string.Format("Unexpected node type (expected 'param'): {0}", elem.Name));
             }
+            if(!elem.HasAttribute("name"))
+            {
+                throw new Exception(
+                    string.Format("Missing name for parameter: {0}", elem.Attributes));
+            }
+            if(!elem.HasAttribute("type"))
+            {
+                throw new Exception(string.Format(
+                    "Missing type for parameter: {0}", elem.Attributes));
+            }
 
             string name = elem.Attributes["name"].Value;
             string[] type = elem.Attributes["type"].Value

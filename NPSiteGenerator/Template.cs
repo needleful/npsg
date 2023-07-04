@@ -98,7 +98,7 @@ namespace NPSiteGenerator
                 }
                 else
                 {
-                    return m.Value;
+                    return "";
                 }
             }
             content.InnerXml = textReplace.Replace(content.InnerXml, _EvalMatch);

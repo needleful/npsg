@@ -38,7 +38,6 @@ namespace NPSiteGenerator
             XmlNode parent, XmlNode feNode,
             IDictionary<string, ITemplateValue> values)
         {
-            XmlElement feElem = feNode as XmlElement;
             string name = feNode.Attributes["list"].Value;
             if (values.ContainsKey(name) && values[name] is ListValue list)
             {
@@ -71,6 +70,10 @@ namespace NPSiteGenerator
                         string.Format("Content was formated as a list, but the param is {0}\n{1}",
                             template.Params[name].TypeName, feNode.OuterXml));
                 }
+            }
+            else
+            {
+                parent.RemoveChild(feNode);
             }
         }
 
