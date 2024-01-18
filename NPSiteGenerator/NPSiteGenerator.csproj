@@ -78,6 +78,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Markdown.cs" />
     <Compile Include="ParamFactory.cs" />
     <Compile Include="Params.cs" />
     <Compile Include="Program.cs" />

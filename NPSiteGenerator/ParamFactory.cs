@@ -41,7 +41,14 @@ namespace NPSiteGenerator
             
             if (type[0].Equals("xml"))
             {
-                return new XmlParam(name, required);
+                if (type.Length > 1)
+                {
+                    return new XmlParam(name, required, type[1]);
+                }
+                else
+                {
+                    return new XmlParam(name, required);
+                }
             }
             else if (type[0].Equals("text"))
             {

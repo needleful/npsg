@@ -40,6 +40,20 @@ namespace NPSiteGenerator
         }
     }
 
+    public class MarkdownValue : ITemplateValue
+    {
+        protected readonly string _xml;
+        public MarkdownValue(XmlNode preprocessed)
+        {
+            _xml = Markdown.ToHTML(preprocessed.InnerXml);
+        }
+
+        public override string ToString()
+        {
+            return _xml;
+        }
+    }
+
     public class ListValue : ITemplateValue
     {
         public IReadOnlyList<ITemplateValue> Values => _values;

@@ -8,6 +8,18 @@ m-1
 	/Something like 
 	/<param name='content' type='xml,content'>
 	/and then it'd automatically convert the text from markdown or something
+	- Paragraph divisions
+		p1
+	- Bold
+		p1
+	- Italics
+		p1
+	- Unordered Lists
+		p1
+	- Strikethrough
+		p1
+	- Arbitrary HTML 
+		p1
 - Linked content references
 	p1
 	/Some way to refer to content on other pages that provides both the content and a link to its original content. Like

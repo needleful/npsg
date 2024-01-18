@@ -141,17 +141,42 @@ namespace NPSiteGenerator
             private set;
         }
 
-        public string TypeName => "xml";
+        public bool Markdown
+        {
+            get;
+            private set;
+        }
 
-        public XmlParam(string name, bool required)
+        public string TypeName => !Markdown ? "xml" : "xml,markdown";
+
+        public XmlParam(string name, bool required, string subtype = "plain")
         {
             Name = name;
             Required = required;
+            if (subtype.Equals("markdown"))
+            {
+                Markdown = true;
+            }
+            else if(subtype.Equals("plain"))
+            {
+                Markdown = false;
+            }
+            else
+            {
+                throw new ArgumentException("Invalid XML subtype: " + subtype);
+            }
         }
 
         public ITemplateValue Process(XmlNode node, TemplateEngine.TContext context)
         {
-            return new XmlValue(node);
+            if (Markdown)
+            {
+                return new MarkdownValue(node);
+            }
+            else
+            {
+                return new XmlValue(node);
+            }
         }
     }
 
