@@ -116,16 +116,6 @@ namespace NPSiteGenerator
             return str.ToString();
         }
 
-        private static readonly string[] symbols =
-        {
-            "__",
-            "**",
-            "_",
-            "*",
-            "~",
-            "`"
-        };
-
         private static readonly Dictionary<string, string> symToTag = new Dictionary<string, string>
         {
             { "*", "em" },
@@ -135,7 +125,10 @@ namespace NPSiteGenerator
             {"`", "code" },
             {"~", "s" }
         };
-        
+
+        private static readonly string[] symbols = symToTag.Keys.OrderBy(sym => -sym.Length).ToArray();
+
+
         private struct TagStart
         {
             public string originalText;
