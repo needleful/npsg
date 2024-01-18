@@ -10,16 +10,24 @@ m-1
 	/and then it'd automatically convert the text from markdown or something
 	- Paragraph divisions
 		p1
+		x
 	- Bold
 		p1
+		x
 	- Italics
 		p1
+		x
 	- Unordered Lists
 		p1
+		x
 	- Strikethrough
 		p1
+		x
 	- Arbitrary HTML 
 		p1
+	- inline code
+		p1
+		x
 - Linked content references
 	p1
 	/Some way to refer to content on other pages that provides both the content and a link to its original content. Like
