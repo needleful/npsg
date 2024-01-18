@@ -1,0 +1,21 @@
+# NP Site Generator
+&a
++
+_
+m-1
+- Markdown/content language
+	p1
+	/Something like 
+	/<param name='content' type='xml,content'>
+	/and then it'd automatically convert the text from markdown or something
+- Linked content references
+	p1
+	/Some way to refer to content on other pages that provides both the content and a link to its original content. Like
+	/
+	/%something:
+	/Our content goes here.
+	/%.
+	/
+	/Then later on you can write %something% and it adds that content and a link to it.
+- Only regenerate changed pages and templates
+	p1
